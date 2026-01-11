@@ -238,6 +238,104 @@
     #tableHead {
       box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset, 0 10px 20px rgba(15,23,42,0.12);
     }
+/* ===== Modal (Enterprise) ===== */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-card{
+  width: min(720px, 100%);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 1);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.18);
+  overflow: hidden;
+}
+
+.modal-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 18px 18px 12px 18px;
+  border-bottom: 1px solid rgba(226, 232, 240, 1);
+}
+
+.modal-title{
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.modal-subtitle{
+  margin-top: 4px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.modal-body{
+  padding: 16px 18px;
+  color: #0f172a;
+}
+
+.modal-actions{
+  padding: 12px 18px 18px 18px;
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+}
+
+.modal-btn{
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid rgba(226, 232, 240, 1);
+  background: #fff;
+  color: #0f172a;
+}
+
+.modal-btn-primary{
+  background: #1E40AF;
+  border-color: #1E40AF;
+  color: #fff;
+}
+
+.modal-btn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(219, 234, 254, 0.7);
+}
+
+/* Chip clickeable (mantiene tus badge-*) */
+.badge-chip{
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.badge-chip:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.10);
+  filter: saturate(1.05);
+}
 
   </style>
 </head>
@@ -21950,6 +22048,50 @@ function exportCSV(rows) {
    ========================================================================= */
 
 function renderKPIs() {
+  // ===== Modal: "Revisar" (UI) =====
+(function initReviewModal(){
+  const modal = $('reviewModal');
+  const btnClose = $('reviewModalClose');
+  const btnGo = $('reviewModalGo');
+
+  function openModal(){
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal(){
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  // Delegación: cualquier elemento con data-open-review-modal abre el modal
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('[data-open-review-modal]');
+    if (trigger) {
+      openModal();
+      return;
+    }
+
+    // Click en backdrop cierra (si clickeás fuera de la tarjeta)
+    if (!modal.classList.contains('hidden') && e.target === modal) {
+      closeModal();
+    }
+  });
+
+  btnClose.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+  });
+
+  // Ir al listado: cierra y hace scroll a la tabla
+  btnGo.addEventListener('click', () => {
+    closeModal();
+    const tb = $('tableBody');
+    if (tb) tb.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+})();
+
   const raw = getRawRows();
   const filtered = applyFilters(raw);
   const ds = DATASETS[state.datasetKey];
@@ -22015,7 +22157,11 @@ function renderKPIs() {
       <div class="kpi-accent"></div>
       <div class="flex items-start justify-between mb-2">
         <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">${kpi.label}</h3>
-        ${kpi.badge ? `<span class="px-2 py-1 text-xs font-semibold rounded-full border ${kpi.badgeClass}">${kpi.badge}</span>` : ''}
+${kpi.badge ? (
+  kpi.badge === 'Revisar'
+    ? `<button type="button" class="badge-chip ${kpi.badgeClass}" data-open-review-modal="1">Revisar</button>`
+    : `<span class="px-2 py-1 text-xs font-semibold rounded-full border ${kpi.badgeClass}">${kpi.badge}</span>`
+) : ''}
       </div>
       <p class="text-3xl font-bold text-blue-corporate">${kpi.value}</p>
     </div>
@@ -22584,5 +22730,30 @@ $('toggleCharts').addEventListener('click', () => {
   render();
 })();
 </script>
+  <!-- Modal: Revisión requerida -->
+<div id="reviewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div id="reviewModalTitle" class="modal-title">Revisión requerida</div>
+        <div class="modal-subtitle">Este indicador marca datos que conviene validar antes de tomar decisiones.</div>
+      </div>
+      <button id="reviewModalClose" class="modal-btn" type="button" aria-label="Cerrar">Cerrar</button>
+    </div>
+
+    <div class="modal-body" id="reviewModalBody">
+      <ul class="list-disc pl-5 space-y-2 text-sm text-slate-700">
+        <li><b>Qué significa:</b> se detectaron items con señales de “stock desactualizado” u otras inconsistencias.</li>
+        <li><b>Riesgo:</b> el margen/rotación puede estar sesgado si el stock no refleja la realidad actual.</li>
+        <li><b>Acción sugerida:</b> verificar fechas de actualización, entradas/salidas y proveedor.</li>
+      </ul>
+    </div>
+
+    <div class="modal-actions">
+      <button id="reviewModalGo" class="modal-btn modal-btn-primary" type="button">Ir al listado</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
