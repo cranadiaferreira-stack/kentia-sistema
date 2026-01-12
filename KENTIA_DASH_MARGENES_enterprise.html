@@ -22053,6 +22053,15 @@ function renderKPIs() {
   const modal = $('reviewModal');
   const btnClose = $('reviewModalClose');
   const btnGo = $('reviewModalGo');
+  // Si el modal todavía no fue parseado (está después del <script>), reintentar luego
+  if (!modal || !btnClose || !btnGo) {
+    setTimeout(initReviewModal, 0);
+    return;
+  }
+
+  // Evitar duplicar listeners en cada render
+  if (modal.dataset.bound === '1') return;
+  modal.dataset.bound = '1';
 
   function openModal(){
     modal.classList.remove('hidden');
