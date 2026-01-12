@@ -21859,6 +21859,7 @@ function loadFromLocalStorage() {
       if (parsed.semilla && Array.isArray(parsed.semilla)) {
         DATA.semilla = parsed.semilla;
       }
+      syncRowIds();
       
       showToast('Datos cargados desde memoria local', 'info');
       return true;
@@ -21867,6 +21868,28 @@ function loadFromLocalStorage() {
     console.error('Error al cargar:', err);
   }
   return false;
+}
+
+function syncRowIds() {
+  let maxId = 0;
+
+  Object.values(DATA).forEach(rows => {
+    rows.forEach(row => {
+      const id = Number(row.__id);
+      if (Number.isFinite(id) && id > maxId) maxId = id;
+    });
+  });
+
+  Object.values(DATA).forEach(rows => {
+    rows.forEach(row => {
+      if (!Number.isFinite(Number(row.__id))) {
+        maxId += 1;
+        row.__id = maxId;
+      }
+    });
+  });
+
+  idCounter = maxId + 1;
 }
 
 /* =========================================================================
@@ -22126,7 +22149,7 @@ function renderKPIs() {
     {
       label: 'Total Productos',
       value: totalProductos.toLocaleString(),
-      badge: totalProductos > 100 ? 'Alto inventario' : '',
+      badge: totalProductos > 100 ? 'INVENTARIO' : '',
       badgeClass: 'badge-info'
     },
     {
